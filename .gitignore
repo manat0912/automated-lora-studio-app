@@ -1,0 +1,24 @@
+# Only publish reviewed source. Models, local work, authentication and runtimes
+# are excluded even if somebody uses git add . after a local installation.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/*.py
+!/requirements.txt
+!/ltx-catalog.seed.json
+!/studio/
+!/tests/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+*.safetensors
+*.gguf
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.whl
+.env*
+*token*
