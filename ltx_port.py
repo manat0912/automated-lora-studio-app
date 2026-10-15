@@ -6,6 +6,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
+def patch_step_timing(code):
+    """Include batch loading and GPU completion in the displayed step duration."""
+    replacements = [
+        ('            for step in range(remaining_steps * cfg.optimization.gradient_accumulation_steps):\n',
+         '            for step in range(remaining_steps * cfg.optimization.gradient_accumulation_steps):\n                step_start_time = time.perf_counter()  # STUDIO wall-clock timing\n'),
+        ('                step_start_time = time.time()\n', ''),
+        ('                    step_time = (time.time() - step_start_time) * cfg.optimization.gradient_accumulation_steps\n                    step_loss = output.loss.detach().mean().item()',
+         '                    step_loss = output.loss.detach().mean().item()\n                    step_time = (time.perf_counter() - step_start_time) * cfg.optimization.gradient_accumulation_steps'),
+    ]
+    for needle,replacement in replacements:
+        if code.count(needle) != 1:
+            raise RuntimeError('Pinned LTX step timing changed; review complete-step measurement.')
+        code = code.replace(needle,replacement,1)
+    return code
+
 def patch(repo,revision):
     port = ROOT/'backends/ltx-studio-port'
     shutil.copytree(Path(repo)/'packages',port,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__'))
@@ -50,6 +65,7 @@ def patch(repo,revision):
     changed.append('ltx-trainer/src/ltx_trainer/model_loader.py')
     target = source/'trainer.py'
     code = target.read_text(encoding='utf-8')
+    code = patch_step_timing(code)
     if 'tmp_path.rename(state_path)' not in code:
         raise RuntimeError('Pinned LTX state-save implementation changed; review Windows atomic replacement.')
     # A checkpoint is saved both at the interval and on finalization. Windows

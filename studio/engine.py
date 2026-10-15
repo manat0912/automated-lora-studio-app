@@ -284,6 +284,10 @@ def subprocess_job(args,id,cancel):
     env['STUDIO_DEVICE_INDEX'] = str(h.get('device_index',0))
     backend_python = Path(args[0]).resolve()
     if backend_python.is_relative_to((ROOT/'backends/ltx-env').resolve()):
+        from .runtime_env import ltx_environment
+        env, removed = ltx_environment(env,h.get('selected_gpu'),sys.platform)
+        if removed:
+            append_log(id,'Native Windows ROCm defaults: cleared legacy process overrides '+', '.join(removed))
         # Official Accelerate training uses logical cuda:0 in a single-GPU run.
         # Expose only the scanned GPU so an integrated/smaller adapter cannot
         # be selected instead on multi-GPU hosts.
